@@ -1,1 +1,1 @@
- this project that explains each query and how to run the scripts
+this project with explanations for these subqueries
