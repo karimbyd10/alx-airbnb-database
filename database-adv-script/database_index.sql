@@ -15,4 +15,13 @@ CREATE INDEX idx_properties_title ON properties(title);
 
 -- Reviews table
 CREATE INDEX idx_reviews_property_id ON reviews(property_id);
+ 
+
+
+
+-- Explain the query to see performance
+EXPLAIN SELECT * FROM bookings WHERE user_id = 'some_user_id';
+
+-- MySQL 8+ supports ANALYZE for runtime metrics
+ANALYZE TABLE bookings;
 
