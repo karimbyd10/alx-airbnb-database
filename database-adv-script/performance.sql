@@ -1,57 +1,57 @@
--- ============================================
 -- performance.sql
--- ============================================
-
--- 🔹 Step 1: Initial Complex Query
--- This query retrieves all bookings along with their related user, property, and payment details.
+-- Initial query before optimization
 
 SELECT 
-    b.booking_id,
+    b.id AS booking_id,
     b.start_date,
     b.end_date,
-    u.user_id,
-    u.name AS user_name,
-    u.email AS user_email,
-    p.property_id,
-    p.title AS property_title,
-    pay.payment_id,
-    pay.amount,
+    b.total_amount,
+    u.id AS user_id,
+    u.first_name,
+    u.last_name,
+    u.email,
+    p.id AS property_id,
+    p.name AS property_name,
+    p.location,
+    pay.id AS payment_id,
+    pay.amount AS payment_amount,
     pay.status AS payment_status
-FROM bookings b
-JOIN users u ON b.user_id = u.user_id
-JOIN properties p ON b.property_id = p.property_id
-JOIN payments pay ON b.booking_id = pay.booking_id;
+FROM Booking b
+JOIN Users u ON b.user_id = u.id
+JOIN Property p ON b.property_id = p.id
+JOIN Payment pay ON pay.booking_id = b.id;
 
--- 🔹 Step 2: Analyze Query Performance
--- Check query execution plan before optimization
-EXPLAIN SELECT 
-    b.booking_id,
+EXPLAIN ANALYZE
+SELECT 
+    b.id AS booking_id,
     b.start_date,
     b.end_date,
-    u.user_id,
-    u.name AS user_name,
-    p.property_id,
-    p.title,
-    pay.amount
-FROM bookings b
-JOIN users u ON b.user_id = u.user_id
-JOIN properties p ON b.property_id = p.property_id
-JOIN payments pay ON b.booking_id = pay.booking_id;
+    b.total_amount,
+    u.first_name,
+    u.last_name,
+    p.name AS property_name,
+    pay.amount AS payment_amount
+FROM Booking b
+JOIN Users u ON b.user_id = u.id
+JOIN Property p ON b.property_id = p.id
+JOIN Payment pay ON pay.booking_id = b.id;
 
--- 🔹 Step 3: Optimized Query
--- Improvements:
--- 1. Selected only necessary columns.
--- 2. Ensured indexes exist on foreign keys (user_id, property_id, booking_id).
--- 3. Replaced JOINs where not needed with EXISTS (optional for very large tables).
+CREATE INDEX idx_booking_user ON Booking(user_id);
+CREATE INDEX idx_booking_property ON Booking(property_id);
+CREATE INDEX idx_payment_booking ON Payment(booking_id);
 
 SELECT 
-    b.booking_id,
+    b.id AS booking_id,
     b.start_date,
-    u.name AS user_name,
-    p.title AS property_title,
-    pay.amount
-FROM bookings b
-JOIN users u ON b.user_id = u.user_id
-JOIN properties p ON b.property_id = p.property_id
-LEFT JOIN payments pay ON b.booking_id = pay.booking_id;
+    b.end_date,
+    u.first_name,
+    u.last_name,
+    p.name AS property_name,
+    pay.amount AS payment_amount
+FROM Booking b
+JOIN Users u ON b.user_id = u.id
+JOIN Property p ON b.property_id = p.id
+JOIN Payment pay ON pay.booking_id = b.id
+WHERE b.start_date >= '2025-01-01'
+  AND b.start_date <= '2025-12-31';
 
