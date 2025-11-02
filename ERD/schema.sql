@@ -1,75 +1,121 @@
--- ========================================
--- Airbnb Database Schema - 3NF
--- ========================================
-
--- -------------------------
--- Users Table
--- -------------------------
-CREATE TABLE IF NOT EXISTS Users (
+-- ==========================================
+-- Users table
+-- ==========================================
+CREATE TABLE Users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
-    phone VARCHAR(20)
+    password_hash VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Index for fast email lookup
+-- Index for faster email searches
 CREATE INDEX idx_users_email ON Users(email);
 
--- -------------------------
--- Properties Table
--- -------------------------
-CREATE TABLE IF NOT EXISTS Properties (
+-- ==========================================
+-- Properties table
+-- ==========================================
+CREATE TABLE Properties (
     property_id INT AUTO_INCREMENT PRIMARY KEY,
-    owner_id INT NOT NULL,
-    street VARCHAR(150) NOT NULL,
-    city VARCHAR(50) NOT NULL,
-    state VARCHAR(50),
-    country VARCHAR(50) NOT NULL,
+    host_id INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    address VARCHAR(255) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100),
+    country VARCHAR(100) NOT NULL,
+    postal_code VARCHAR(20),
     price_per_night DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (owner_id) REFERENCES Users(user_id)
+    max_guests INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (host_id) REFERENCES Users(user_id)
         ON DELETE CASCADE
         ON UPDATE CASCADE
 );
 
--- Index for city-based searches
-CREATE INDEX idx_properties_city ON Properties(city);
+-- Index for faster searches by city and price
+CREATE INDEX idx_properties_city_price ON Properties(city, price_per_night);
 
--- -------------------------
--- Bookings Table
--- -------------------------
-CREATE TABLE IF NOT EXISTS Bookings (
+-- ==========================================
+-- Bookings table
+-- ==========================================
+CREATE TABLE Bookings (
     booking_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
     property_id INT NOT NULL,
+    user_id INT NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES Users(user_id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE,
+    total_price DECIMAL(10,2) NOT NULL,
+    status ENUM('pending', 'confirmed', 'cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (property_id) REFERENCES Properties(property_id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
-    CONSTRAINT chk_booking_dates CHECK (end_date > start_date)
+    FOREIGN KEY (user_id) REFERENCES Users(user_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CHECK (start_date < end_date)
 );
 
--- Index for searching bookings by user
-CREATE INDEX idx_bookings_user_id ON Bookings(user_id);
--- Index for searching bookings by property
-CREATE INDEX idx_bookings_property_id ON Bookings(property_id);
+-- Index for quick lookup of bookings by user and date
+CREATE INDEX idx_bookings_user_dates ON Bookings(user_id, start_date, end_date);
 
--- -------------------------
--- Payments Table
--- -------------------------
-CREATE TABLE IF NOT EXISTS Payments (
+-- ==========================================
+-- Payments table
+-- ==========================================
+CREATE TABLE Payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     booking_id INT NOT NULL,
-    payment_method VARCHAR(50) NOT NULL,
-    payment_status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('credit_card', 'paypal', 'bank_transfer') NOT NULL,
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
     FOREIGN KEY (booking_id) REFERENCES Bookings(booking_id)
         ON DELETE CASCADE
         ON UPDATE CASCADE
 );
 
--- Index for searching payments by status
-CREATE INDEX idx_payments_status ON Payments(payment_status);
+-- Index for faster payment searches
+CREATE INDEX idx_payments_booking ON Payments(booking_id);
+
+-- ==========================================
+-- Reviews table
+-- ==========================================
+CREATE TABLE Reviews (
+    review_id INT AUTO_INCREMENT PRIMARY KEY,
+    property_id INT NOT NULL,
+    user_id INT NOT NULL,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (property_id) REFERENCES Properties(property_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+-- Index for faster property review lookup
+CREATE INDEX idx_reviews_property ON Reviews(property_id);
+
+-- ==========================================
+-- Property_Amenities table
+-- ==========================================
+CREATE TABLE Property_Amenities (
+    property_id INT NOT NULL,
+    amenity VARCHAR(100) NOT NULL,
+    PRIMARY KEY (property_id, amenity),
+    FOREIGN KEY (property_id) REFERENCES Properties(property_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+-- Index for searching amenities
+CREATE INDEX idx_amenities_amenity ON Property_Amenities(amenity);
 
